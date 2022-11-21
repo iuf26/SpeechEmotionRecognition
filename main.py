@@ -1,7 +1,3 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import librosa
 import librosa.display as lr
 import numpy as np
@@ -107,11 +103,10 @@ def remasterEmoDbDataset(rawDataSetPath, remasteredDatasetPath):
     os.remove('img2.jpg')
     os.remove('img3.jpg')
 
-# Press the green button in the gutter to run the script.
+
 if __name__ == '__main__':
     rawDataSetPath = 'D:\\LICENTA\\Database\\EMODB\\wav'
     remasteredDatasetPath = 'D:\\LICENTA\\Database\\EMODB-GROUPED' #create a folder for each emotion label in EMODB
     remasterEmoDbDataset(rawDataSetPath, remasteredDatasetPath)
     #alexNetModel(remasteredDatasetPath)   call this function to create de AlexnetModel locally
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
