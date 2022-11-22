@@ -11,6 +11,21 @@ import tensorflow as tf
 import pathlib
 import datetime
 
+from numpy import asarray
+
+
+class myCallback(tf.keras.callbacks.Callback):
+    def on_epoch_end(self,epoch,logs={}):
+        if (logs.get("accuracy")==1.00 and logs.get("loss")<0.03):
+            print("\nReached 100% accuracy so stopping training")
+            self.model.stop_training =True
+callbacks = myCallback()
+
+# TensorBoard.dev Visuals
+log_dir="logs\\fit\\" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
+
 # creates a model.json and model.h5 file containing the CNN details
 def alexNetModel(datasetPath):
     data_dir = pathlib.Path(datasetPath)
@@ -22,6 +37,7 @@ def alexNetModel(datasetPath):
     # print length of class names
     output_class_units = len(CLASS_NAMES)
     print(output_class_units)
+
     model = tf.keras.models.Sequential([
         # 1st conv
         tf.keras.layers.Conv2D(96, (11, 11), strides=(4, 4), activation='relu', input_shape=(227, 227, 3)),
@@ -50,6 +66,33 @@ def alexNetModel(datasetPath):
         # add dropout 0.5 ==> tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(output_class_units, activation='softmax')
     ])
+
+    model.compile(optimizer='sgd', loss="categorical_crossentropy", metrics=['accuracy'])
+    # Summarizing the model architecture and printing it out
+    model.summary()
+
+    BATCH_SIZE = 8  # Can be of size 2^n, but not restricted to. for the better utilization of memory
+    IMG_HEIGHT = 227  # input Shape required by the model
+    IMG_WIDTH = 227
+    STEPS_PER_EPOCH = np.ceil(image_count / BATCH_SIZE)
+
+    image_generator = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1. / 255)
+    # training_data for model training
+    train_data_gen = image_generator.flow_from_directory(directory=str(data_dir),
+                                                         batch_size=BATCH_SIZE,
+                                                         shuffle=True,
+                                                         target_size=(IMG_HEIGHT, IMG_WIDTH),
+                                                         # Resizing the raw dataset
+                                                         classes=list(CLASS_NAMES))
+
+    model.fit(
+        train_data_gen,
+        steps_per_epoch=STEPS_PER_EPOCH,
+        epochs=50)
+
+    # Saving the model
+    model.save('AlexNet_saved_model/')
+
     model_json = model.to_json()
     with open("AlexnetModel/model.json", "w") as json_file:
         json_file.write(model_json)
@@ -104,9 +147,19 @@ def remasterEmoDbDataset(rawDataSetPath, remasteredDatasetPath):
     os.remove('img3.jpg')
 
 
+def getOutput():
+    new_model = tf.keras.models.load_model("AlexNet_saved_model/")
+    new_model.summary()
+    img = Image.open('08b01Lb.jpg')
+    numpydata = np.array(img)[None, ...]
+    print(new_model.predict(numpydata))
+
+
 if __name__ == '__main__':
-    rawDataSetPath = 'D:\\LICENTA\\Database\\EMODB\\wav'
-    remasteredDatasetPath = 'D:\\LICENTA\\Database\\EMODB-GROUPED' #create a folder for each emotion label in EMODB
-    remasterEmoDbDataset(rawDataSetPath, remasteredDatasetPath)
-    #alexNetModel(remasteredDatasetPath)   call this function to create de AlexnetModel locally
+    #rawDataSetPath = 'C:\\Users\\mihai.gherasim\\OneDrive - ACCESA\\Desktop\\test_dataset'
+    #remasteredDatasetPath = 'C:\\Users\\mihai.gherasim\\OneDrive - ACCESA\\Desktop\\EMODB-GROUPED' #create a folder for each emotion label in EMODB
+    #remasteredDatasetPath = 'C:\\Users\\mihai.gherasim\\OneDrive - ACCESA\\Desktop\\EMODB-GROUPED-TEST'
+    #remasterEmoDbDataset(rawDataSetPath, remasteredDatasetPath)
+    #alexNetModel(remasteredDatasetPath)   #call this function to create de AlexnetModel locally
+    getOutput()
 
