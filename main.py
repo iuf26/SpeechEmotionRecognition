@@ -10,15 +10,16 @@ import os
 import tensorflow as tf
 import pathlib
 import datetime
+import glob
 
 from numpy import asarray
 
 
 class myCallback(tf.keras.callbacks.Callback):
-    def on_epoch_end(self,epoch,logs={}):
+    def on_epoch_end(self, epoch, logs={}):
         if (logs.get("accuracy")==1.00 and logs.get("loss")<0.03):
             print("\nReached 100% accuracy so stopping training")
-            self.model.stop_training =True
+            self.model.stop_training = True
 callbacks = myCallback()
 
 # TensorBoard.dev Visuals
@@ -32,7 +33,7 @@ def alexNetModel(datasetPath):
     image_count = len(list(data_dir.glob('*/*.jpg')))
     print(image_count)
     # classnames in the dataset specified
-    CLASS_NAMES = ['anger' ,'anxiety' ,'boredom' ,'disgust' ,'happiness' ,'neutral' ,'sadness']
+    CLASS_NAMES = ['happiness', 'sadness']
     print(CLASS_NAMES)
     # print length of class names
     output_class_units = len(CLASS_NAMES)
@@ -82,9 +83,10 @@ def alexNetModel(datasetPath):
                                                          batch_size=BATCH_SIZE,
                                                          shuffle=True,
                                                          target_size=(IMG_HEIGHT, IMG_WIDTH),
-                                                         # Resizing the raw dataset
-                                                         classes=list(CLASS_NAMES))
-
+                                                         classes=list(CLASS_NAMES)
+                                                         )
+    #sa dam un print sa verificam daca generatorul ne duce in one hot encoding
+    #print(train_data_gen.class_mode)
     model.fit(
         train_data_gen,
         steps_per_epoch=STEPS_PER_EPOCH,
@@ -105,7 +107,7 @@ def remasterEmoDbDataset(rawDataSetPath, remasteredDatasetPath):
         "W": "anger",
         "L": "boredom",
         "A": "anxiety",
-        "T": "sadness",
+        "YAF": "sadness",
         "E": "disgust",
         "N": "neutral"
     }
@@ -146,20 +148,46 @@ def remasterEmoDbDataset(rawDataSetPath, remasteredDatasetPath):
     os.remove('img2.jpg')
     os.remove('img3.jpg')
 
-
 def getOutput():
     new_model = tf.keras.models.load_model("AlexNet_saved_model/")
     new_model.summary()
-    img = Image.open('08b01Lb.jpg')
-    numpydata = np.array(img)[None, ...]
-    print(new_model.predict(numpydata))
+    for img in glob.glob("C:\\Users\\mihai.gherasim\\OneDrive - ACCESA\\Desktop\\new-train-dataset\\happiness\\*.jpg"):
+        img = Image.open(img)
+        numpydata = np.array(img)[None, ...]
+        print(new_model.predict(numpydata/255)[0])
+
+
+def testModel(datasetPath):
+    data_dir = pathlib.Path(datasetPath)
+    #pentru testarea modelului cu 7 emotii
+    #CLASS_NAMES = ['anger', 'anxiety', 'boredom', 'disgust', 'happiness', 'neutral', 'sadness']
+
+    #pentru testarea modelului cu 4 emotii
+    #CLASS_NAMES = ['anger', 'anxiety', 'happiness', 'sadness']
+
+    #pentru testarea modelului cu 2 emotii
+    CLASS_NAMES = ['happiness', 'sadness']
+    #keras utils to categorical
+    IMG_HEIGHT = 227  # input Shape required by the model
+    IMG_WIDTH = 227
+    image_generator = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1. / 255)
+    test_data_gen = image_generator.flow_from_directory(directory=str(data_dir),
+                                                        shuffle=True,
+                                                        target_size=(IMG_HEIGHT, IMG_WIDTH),  # Resizing the raw dataset
+                                                        classes=list(CLASS_NAMES))
+    # Loading the saved model
+    new_model = tf.keras.models.load_model("AlexNet_saved_model/")
+    new_model.summary()
+    loss, acc = new_model.evaluate(test_data_gen)
+    print("accuracy:{:.2f}%".format(acc * 100))
 
 
 if __name__ == '__main__':
-    #rawDataSetPath = 'C:\\Users\\mihai.gherasim\\OneDrive - ACCESA\\Desktop\\test_dataset'
+    #rawDataSetPath = 'C:\\Users\\mihai.gherasim\\OneDrive - ACCESA\\Desktop\\NEW-DATASET\\sadness'
     #remasteredDatasetPath = 'C:\\Users\\mihai.gherasim\\OneDrive - ACCESA\\Desktop\\EMODB-GROUPED' #create a folder for each emotion label in EMODB
-    #remasteredDatasetPath = 'C:\\Users\\mihai.gherasim\\OneDrive - ACCESA\\Desktop\\EMODB-GROUPED-TEST'
+    remasteredDatasetPath = 'C:\\Users\\mihai.gherasim\\OneDrive - ACCESA\\Desktop\\EMODB-GROUPED'
     #remasterEmoDbDataset(rawDataSetPath, remasteredDatasetPath)
     #alexNetModel(remasteredDatasetPath)   #call this function to create de AlexnetModel locally
+    #testModel(remasteredDatasetPath)
     getOutput()
 
